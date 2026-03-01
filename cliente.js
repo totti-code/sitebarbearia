@@ -23,6 +23,13 @@ function escapeHtml(s){
     .replaceAll("'","&#039;");
 }
 
+function setMsg(text){
+  msg.textContent = text || "";
+}
+
+// =========================
+// Carregar serviços/profissionais (público)
+// =========================
 async function loadServicos(){
   const { data, error } = await sb
     .from("servicos")
@@ -55,116 +62,98 @@ async function loadProfissionais(){
     ))).join("");
 }
 
-// gera horários em slots (ex: 09:00 a 18:00)
-function generateSlots(start="09:00", end="18:00", stepMin=30){
-  const out = [];
-  const [sh, sm] = start.split(":").map(Number);
-  const [eh, em] = end.split(":").map(Number);
-  let cur = sh*60 + sm;
-  const endMin = eh*60 + em;
-  while(cur + stepMin <= endMin){
-    const h = Math.floor(cur/60), m = cur%60;
-    out.push(`${pad(h)}:${pad(m)}`);
-    cur += stepMin;
-  }
-  return out;
-}
-
+// =========================
+// Horários DISPONÍVEIS (via RPC)
+// =========================
 async function loadHorariosDisponiveis(){
-  msg.textContent = "";
-  const serviceOpt = servico.selectedOptions[0];
-  const dur = Number(serviceOpt?.getAttribute("data-dur") || 30);
+  setMsg("");
 
   if(!dia.value || !prof.value || !servico.value){
     hora.innerHTML = `<option value="">Selecione serviço, profissional e dia</option>`;
     return;
   }
 
-  // horário base do salão (ajusta aqui)
-  const slots = generateSlots("09:00","18:00",30);
+  const dur = Number(servico.selectedOptions?.[0]?.getAttribute("data-dur") || 30);
 
-  // buscar agendamentos existentes do dia (para bloquear conflito)
-  const day = dia.value;
-  const start = new Date(`${day}T00:00:00`).toISOString();
-  const end = new Date(`${day}T23:59:59`).toISOString();
+  // RPC: get_available_slots
+  const { data, error } = await sb.rpc("get_available_slots", {
+    p_profissional_id: prof.value,
+    p_dia: dia.value,                  // "YYYY-MM-DD"
+    p_duracao_min: dur,
+    p_abre: "09:00:00",
+    p_fecha: "18:00:00",
+    p_step_min: 30
+  });
 
-  const { data: ags, error } = await sb
-    .from("agendamentos")
-    .select("inicio,fim,status,profissional_id")
-    .eq("profissional_id", prof.value)
-    .not("status", "eq", "cancelado")
-    .gte("inicio", start)
-    .lte("inicio", end);
-
-  if(error) {
-    // se RLS bloquear leitura para anon, você pode remover essa checagem e só validar no painel
-    // mas como a policy de agendamentos no seu MVP estava "authenticated", anon não consegue ler mesmo.
-    // então vamos cair para modo simples:
-    hora.innerHTML = slots.map(h => `<option value="${h}">${h}</option>`).join("");
-    msg.textContent = "Horários carregados (confirmação final pelo salão).";
-    return;
-  }
-
-  // monta lista bloqueada por overlap (se anon conseguir ler)
-  const blocked = new Set();
-  for(const s of slots){
-    const inicioLocal = new Date(`${day}T${s}:00`);
-    const fimLocal = new Date(inicioLocal.getTime() + dur*60000);
-
-    const overlap = (ags||[]).some(a => {
-      const ai = new Date(a.inicio), af = new Date(a.fim);
-      return ai < fimLocal && af > inicioLocal;
-    });
-    if(overlap) blocked.add(s);
-  }
-
-  const options = slots
-    .filter(h => !blocked.has(h))
-    .map(h => `<option value="${h}">${h}</option>`)
-    .join("");
-
-  hora.innerHTML = options || `<option value="">Sem horários</option>`;
-}
-
-async function enviar(){
-  msg.textContent = "";
-  const nome = $("nome").value.trim();
-  const tel = $("tel").value.trim();
-  const obs = $("obs").value.trim() || null;
-
-  if(!nome || !tel) { msg.textContent = "Preencha nome e telefone."; return; }
-  if(!servico.value || !prof.value || !dia.value || !hora.value){
-    msg.textContent = "Selecione serviço, profissional, dia e horário.";
-    return;
-  }
-
-  const dur = Number(servico.selectedOptions[0]?.getAttribute("data-dur") || 30);
-  const inicio = new Date(`${dia.value}T${hora.value}:00`);
-  const fim = new Date(inicio.getTime() + dur*60000);
-
-  const payload = {
-    nome_cliente: nome,
-    telefone: tel,
-    servico_id: servico.value,
-    profissional_id: prof.value,
-    inicio: inicio.toISOString(),
-    fim: fim.toISOString(),
-    obs,
-    status: "pendente"
-  };
-
-  const { error } = await sb.from("agendamentos_publicos").insert(payload);
   if(error){
-    msg.textContent = error.message;
+    console.error(error);
+    hora.innerHTML = `<option value="">Erro ao carregar horários</option>`;
+    setMsg(error.message || "Erro ao carregar horários.");
     return;
   }
 
-  msg.textContent = "Solicitação enviada! O salão vai confirmar.";
-  $("obs").value = "";
+  const slots = (data || []).map(r => String(r.slot).slice(0,5)); // HH:MM
+
+  hora.innerHTML = slots.length
+    ? slots.map(h => `<option value="${h}">${h}</option>`).join("")
+    : `<option value="">Sem horários disponíveis</option>`;
 }
 
+// =========================
+// Agendar DIRETO (via RPC)
+// =========================
+async function enviar(){
+  setMsg("");
+
+  const nome = $("nome").value.trim();
+  const tel  = $("tel").value.trim();
+  const obs  = $("obs").value.trim() || null;
+
+  if(!nome || !tel){
+    setMsg("Preencha nome e telefone.");
+    return;
+  }
+  if(!servico.value || !prof.value || !dia.value || !hora.value){
+    setMsg("Selecione serviço, profissional, dia e horário.");
+    return;
+  }
+
+  const dur = Number(servico.selectedOptions?.[0]?.getAttribute("data-dur") || 30);
+
+  // RPC: book_appointment_public
+  const { data, error } = await sb.rpc("book_appointment_public", {
+    p_nome_cliente: nome,
+    p_telefone: tel,
+    p_profissional_id: prof.value,
+    p_servico_id: servico.value,
+    p_dia: dia.value,
+    p_hora: hora.value + ":00",     // HH:MM:SS
+    p_duracao_min: dur,
+    p_obs: obs
+  });
+
+  if(error){
+    console.error(error);
+    setMsg(error.message || "Não foi possível agendar.");
+    // atualiza lista porque pode ter mudado (alguém pegou antes)
+    await loadHorariosDisponiveis();
+    return;
+  }
+
+  // data geralmente vem como UUID do agendamento criado
+  setMsg("Agendamento confirmado! ✅");
+  $("obs").value = "";
+
+  // Recarrega horários para "sumir" o horário recém-agendado
+  await loadHorariosDisponiveis();
+}
+
+// =========================
+// Init
+// =========================
 async function init(){
   dia.value = todayISO();
+
   await Promise.all([loadServicos(), loadProfissionais()]);
   await loadHorariosDisponiveis();
 
@@ -174,4 +163,7 @@ async function init(){
   $("btnEnviar").addEventListener("click", enviar);
 }
 
-init().catch(e => { console.error(e); msg.textContent = e.message; });
+init().catch(e => {
+  console.error(e);
+  setMsg(e.message || "Erro ao iniciar.");
+});
