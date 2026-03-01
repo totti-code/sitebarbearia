@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Martree Salon | Agenda</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="topInner">
+      <div class="brand">
+        <div class="logo">MS</div>
+        <div>
+          <h1>Martree Salon</h1>
+          <p class="muted">Agenda • Clientes • Serviços • Caixa</p>
+        </div>
+      </div>
+
+      <div class="actions">
+        <span id="whoami" class="muted small"></span>
+        <button class="btn ghost" id="btnTheme" title="Tema">Tema</button>
+        <button class="btn danger" id="btnLogout" title="Sair">Sair</button>
+      </div>
+    </div>
+
+    <nav class="tabs">
+      <button class="tab active" data-tab="agenda">Agenda</button>
+      <button class="tab" data-tab="clientes">Clientes</button>
+      <button class="tab" data-tab="servicos">Serviços</button>
+      <button class="tab" data-tab="profissionais">Profissionais</button>
+      <button class="tab" data-tab="caixa">Caixa</button>
+    </nav>
+  </header>
+
+  <main class="wrap">
+
+    <!-- LOGIN -->
+    <section id="viewLogin" class="card">
+      <h2>Entrar</h2>
+      <p class="muted">Use o login criado no Supabase (Authentication).</p>
+
+      <div class="grid2">
+        <label class="field">
+          <span>E-mail</span>
+          <input id="loginEmail" type="email" placeholder="seu@email.com" autocomplete="username" />
+        </label>
+
+        <label class="field">
+          <span>Senha</span>
+          <input id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password" />
+        </label>
+      </div>
+
+      <div class="row">
+        <button class="btn" id="btnLogin">Entrar</button>
+        <button class="btn ghost" id="btnForgot">Esqueci a senha</button>
+        <span id="loginMsg" class="muted"></span>
+      </div>
+
+      <details class="hint">
+        <summary>Configuração do Supabase (1 vez)</summary>
+        <ol class="muted">
+          <li>No arquivo <b>app.js</b>, cole seu <b>SUPABASE_URL</b> e <b>SUPABASE_ANON_KEY</b>.</li>
+          <li>Em Authentication > URL Configuration: adicione o domínio do seu site em <b>Site URL</b> e <b>Redirect URLs</b>.</li>
+        </ol>
+      </details>
+    </section>
+
+    <!-- APP -->
+    <section id="viewApp" class="hidden">
+      <section class="card" id="banner">
+        <div class="bannerRow">
+          <div>
+            <h2 id="pageTitle">Agenda</h2>
+            <p class="muted" id="pageSubtitle">Crie e gerencie atendimentos do dia.</p>
+          </div>
+          <div class="bannerActions">
+            <button class="btn ghost" id="btnRefresh">Atualizar</button>
+            <button class="btn" id="btnExportCsv">Exportar CSV (dia)</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- AGENDA -->
+      <section class="card tabView" id="tab_agenda">
+        <div class="grid3">
+          <label class="field">
+            <span>Dia</span>
+            <input id="agendaDay" type="date" />
+          </label>
+
+          <label class="field">
+            <span>Profissional</span>
+            <select id="filterProf"></select>
+          </label>
+
+          <label class="field">
+            <span>Status</span>
+            <select id="filterStatus">
+              <option value="">Todos</option>
+              <option value="marcado">Marcado</option>
+              <option value="confirmado">Confirmado</option>
+              <option value="cancelado">Cancelado</option>
+              <option value="finalizado">Finalizado</option>
+            </select>
+          </label>
+        </div>
+
+        <hr class="hr" />
+
+        <h3>Novo agendamento</h3>
+        <div class="grid3">
+          <label class="field">
+            <span>Cliente</span>
+            <select id="agCliente"></select>
+          </label>
+
+          <label class="field">
+            <span>Profissional</span>
+            <select id="agProf"></select>
+          </label>
+
+          <label class="field">
+            <span>Serviço</span>
+            <select id="agServico"></select>
+          </label>
+
+          <label class="field">
+            <span>Início</span>
+            <input id="agInicio" type="datetime-local" />
+          </label>
+
+          <label class="field">
+            <span>Duração (min)</span>
+            <input id="agDur" type="number" min="5" step="5" value="30" />
+          </label>
+
+          <label class="field">
+            <span>Status</span>
+            <select id="agStatus">
+              <option value="marcado">Marcado</option>
+              <option value="confirmado">Confirmado</option>
+            </select>
+          </label>
+        </div>
+
+        <label class="field">
+          <span>Observação</span>
+          <input id="agObs" type="text" placeholder="Ex: cliente pediu corte + barba" />
+        </label>
+
+        <div class="row">
+          <button class="btn" id="btnAgendar">Salvar agendamento</button>
+          <span class="muted" id="agMsg"></span>
+        </div>
+
+        <hr class="hr" />
+
+        <h3>Agendamentos do dia</h3>
+        <div class="tableWrap">
+          <table class="table" id="tblAgenda">
+            <thead>
+              <tr>
+                <th>Horário</th>
+                <th>Cliente</th>
+                <th>Profissional</th>
+                <th>Serviço</th>
+                <th>Status</th>
+                <th class="right">Ações</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p class="muted small">* “Finalizar” cria comanda e registra pagamento no Caixa.</p>
+      </section>
+
+      <!-- CLIENTES -->
+      <section class="card tabView hidden" id="tab_clientes">
+        <div class="split">
+          <div>
+            <h3>Novo cliente</h3>
+            <div class="grid2">
+              <label class="field">
+                <span>Nome</span>
+                <input id="clNome" type="text" placeholder="Nome do cliente" />
+              </label>
+              <label class="field">
+                <span>Telefone</span>
+                <input id="clTel" type="text" placeholder="(xx) xxxxx-xxxx" />
+              </label>
+              <label class="field">
+                <span>Aniversário</span>
+                <input id="clNiver" type="date" />
+              </label>
+              <label class="field">
+                <span>Obs</span>
+                <input id="clObs" type="text" placeholder="Preferências, alergias..." />
+              </label>
+            </div>
+            <div class="row">
+              <button class="btn" id="btnAddCliente">Adicionar</button>
+              <span class="muted" id="clMsg"></span>
+            </div>
+          </div>
+
+          <div>
+            <h3>Lista</h3>
+            <label class="field">
+              <span>Buscar</span>
+              <input id="clSearch" type="text" placeholder="Digite para filtrar..." />
+            </label>
+            <div class="tableWrap">
+              <table class="table" id="tblClientes">
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>Telefone</th>
+                    <th>Aniversário</th>
+                    <th class="right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <p class="muted small">* Deletar cliente só funciona para <b>admin</b>.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- SERVICOS -->
+      <section class="card tabView hidden" id="tab_servicos">
+        <div class="split">
+          <div>
+            <h3>Novo serviço</h3>
+            <div class="grid3">
+              <label class="field">
+                <span>Nome</span>
+                <input id="svNome" type="text" placeholder="Ex: Corte" />
+              </label>
+              <label class="field">
+                <span>Duração (min)</span>
+                <input id="svDur" type="number" min="5" step="5" value="30" />
+              </label>
+              <label class="field">
+                <span>Preço</span>
+                <input id="svPreco" type="number" min="0" step="0.01" value="0" />
+              </label>
+            </div>
+            <div class="row">
+              <button class="btn" id="btnAddServico">Adicionar</button>
+              <span class="muted" id="svMsg"></span>
+            </div>
+            <p class="muted small">* Criar/editar serviços é <b>admin</b>.</p>
+          </div>
+
+          <div>
+            <h3>Lista</h3>
+            <div class="tableWrap">
+              <table class="table" id="tblServicos">
+                <thead>
+                  <tr>
+                    <th>Serviço</th>
+                    <th>Duração</th>
+                    <th>Preço</th>
+                    <th class="right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PROFISSIONAIS -->
+      <section class="card tabView hidden" id="tab_profissionais">
+        <div class="split">
+          <div>
+            <h3>Novo profissional</h3>
+            <label class="field">
+              <span>Nome</span>
+              <input id="pfNome" type="text" placeholder="Ex: João" />
+            </label>
+            <div class="row">
+              <button class="btn" id="btnAddProf">Adicionar</button>
+              <span class="muted" id="pfMsg"></span>
+            </div>
+            <p class="muted small">* Criar/editar profissionais é <b>admin</b>.</p>
+          </div>
+
+          <div>
+            <h3>Lista</h3>
+            <div class="tableWrap">
+              <table class="table" id="tblProf">
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>Ativo</th>
+                    <th class="right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CAIXA -->
+      <section class="card tabView hidden" id="tab_caixa">
+        <div class="grid3">
+          <label class="field">
+            <span>De</span>
+            <input id="cxDe" type="date" />
+          </label>
+          <label class="field">
+            <span>Até</span>
+            <input id="cxAte" type="date" />
+          </label>
+          <div class="kpis">
+            <div class="kpi">
+              <div class="muted small">Total</div>
+              <div class="kpiVal" id="kpiTotal">R$ 0,00</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tableWrap">
+          <table class="table" id="tblCaixa">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Cliente</th>
+                <th>Serviço</th>
+                <th>Forma</th>
+                <th class="right">Valor</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <footer class="foot muted small">
+        MVP Martree Salon • Supabase • Web
+      </footer>
+    </section>
+  </main>
+
+  <!-- Supabase JS (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
+</body>
+</html>
