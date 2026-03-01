@@ -3,8 +3,8 @@
    ========================= */
 
 // 1) COLE AQUI:
-const SUPABASE_URL = "COLE_AQUI_SUA_SUPABASE_URL";
-const SUPABASE_ANON_KEY = "COLE_AQUI_SUA_SUPABASE_ANON_KEY";
+const SUPABASE_URL = "https://qdvywfdfalzgjjxigsfv.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_7Ui7z4RjONohMUMFwXb7mg_P4BzzONL";
 
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
