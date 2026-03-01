@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Martree Salon | Agendar</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="topInner">
+      <div class="brand">
+        <div class="logo">MS</div>
+        <div>
+          <h1>Martree Salon</h1>
+          <p class="muted">Agendamento online</p>
+        </div>
+      </div>
+      <div class="actions">
+        <a class="btn ghost" href="./index.html">Área interna</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="card">
+      <h2>Agendar horário</h2>
+      <p class="muted">Escolha o serviço, profissional e horário. Você receberá confirmação pelo salão.</p>
+
+      <div class="grid2">
+        <label class="field">
+          <span>Seu nome</span>
+          <input id="nome" type="text" placeholder="Ex: João Silva" />
+        </label>
+        <label class="field">
+          <span>WhatsApp / Telefone</span>
+          <input id="tel" type="text" placeholder="(xx) xxxxx-xxxx" />
+        </label>
+      </div>
+
+      <div class="grid3">
+        <label class="field">
+          <span>Serviço</span>
+          <select id="servico"></select>
+        </label>
+
+        <label class="field">
+          <span>Profissional</span>
+          <select id="prof"></select>
+        </label>
+
+        <label class="field">
+          <span>Dia</span>
+          <input id="dia" type="date" />
+        </label>
+      </div>
+
+      <div class="grid2">
+        <label class="field">
+          <span>Horário</span>
+          <select id="hora"></select>
+        </label>
+
+        <label class="field">
+          <span>Observação (opcional)</span>
+          <input id="obs" type="text" placeholder="Ex: preferência, referência..." />
+        </label>
+      </div>
+
+      <div class="row">
+        <button class="btn" id="btnEnviar">Enviar solicitação</button>
+        <span class="muted" id="msg"></span>
+      </div>
+
+      <details class="hint">
+        <summary>Como funciona?</summary>
+        <p class="muted small">
+          Seu pedido fica como <b>pendente</b> e o salão aprova na área interna.
+        </p>
+      </details>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="cliente.js"></script>
+</body>
+</html>
